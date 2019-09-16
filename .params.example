@@ -1,0 +1,17 @@
+{
+    "grdf": 
+    {
+        "username": 	"",
+        "password": 	""
+    },
+    "influx": 
+    {
+        "host": 	"",
+        "port": 	8086,
+        "db": 		"gazpar",
+        "username": 	"gazpar",
+        "password": 	"",
+        "ssl":		true, 
+        "verify_ssl": 	true
+    }
+}
