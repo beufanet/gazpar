@@ -13,8 +13,11 @@ import json
 import argparse
 import logging
 import pprint
+from envparse import env
 
 PFILE = "/.params"
+DOCKER_MANDATORY_VARENV=['GRDF_USERNAME','GRDF_PASSWORD','INFLUXDB_HOST','INFLUXDB_DATABASE','INFLUXDB_USERNAME','INFLUXDB_PASSWORD']
+DOCKER_OPTIONAL_VARENV=['INFLUXDB_PORT', 'INFLUXDB_SSL', 'INFLUXDB_VERIFY_SSL']
 
 
 # Sub to return format wanted by linky.py
@@ -23,8 +26,19 @@ def _dayToStr(date):
 
 # Open file with params for influxdb, enedis API and HC/HP time window
 def _openParams(pfile):
+    # Try to load environment variables
+    if set(DOCKER_MANDATORY_VARENV).issubset(set(os.environ)):
+        return {'grdf': {'username': env(DOCKER_MANDATORY_VARENV[0]),
+                         'password': env(DOCKER_MANDATORY_VARENV[1])},
+                'influx': {'host': env(DOCKER_MANDATORY_VARENV[2]),
+                           'port': env.int(DOCKER_OPTIONAL_VARENV[0], default=8086),
+                           'db': env(DOCKER_MANDATORY_VARENV[3]),
+                           'username': env(DOCKER_MANDATORY_VARENV[4]),
+                           'password': env(DOCKER_MANDATORY_VARENV[5]),
+                           'ssl': env.bool(DOCKER_OPTIONAL_VARENV[1], default=True),
+                           'verify_ssl': env.bool(DOCKER_OPTIONAL_VARENV[2], default=True)}}
     # Try to load .params then programs_dir/.params
-    if os.path.isfile(os.getcwd() + pfile):
+    elif os.path.isfile(os.getcwd() + pfile):
         p = os.getcwd() + pfile
     elif os.path.isfile(os.path.dirname(os.path.realpath(__file__)) + pfile):
         p = os.path.dirname(os.path.realpath(__file__)) + pfile

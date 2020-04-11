@@ -5,3 +5,4 @@ influxdb
 argparse
 fake_useragent
 pprint
+envparse
