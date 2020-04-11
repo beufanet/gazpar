@@ -24,7 +24,7 @@ DOCKER_OPTIONAL_VARENV=['INFLUXDB_PORT', 'INFLUXDB_SSL', 'INFLUXDB_VERIFY_SSL']
 def _dayToStr(date):
     return date.strftime("%d/%m/%Y")
 
-# Open file with params for influxdb, enedis API and HC/HP time window
+# Open file with params for influxdb, GRDF API
 def _openParams(pfile):
     # Try to load environment variables
     if set(DOCKER_MANDATORY_VARENV).issubset(set(os.environ)):
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         logging.error("unable to login on %s", params['influx']['host'])
         sys.exit(1)
 
-    # Try to log in Enedis API
+    # Try to log in GRDF API
     try:
         logging.info("logging in GRDF URI %s...", gazpar.API_BASE_URI)
         token = gazpar.login(params['grdf']['username'], params['grdf']['password'])
@@ -135,11 +135,11 @@ if __name__ == "__main__":
     logging.info("will use %s as firstDate and %s as startDate", firstTS, startDate)
     endDate = _dayToStr(datetime.date.today())
 
-    # Try to get data from Enedis API
+    # Try to get data from GRDF API
     resGrdf = gazpar.get_data_per_day(token, startDate, endDate)
     try:
         logging.info("get Data from GRDF from {0} to {1}".format(startDate, endDate))
-        # Get result from Enedis by 30m
+        # Get result from GRDF by day
         resGrdf = gazpar.get_data_per_day(token, startDate, endDate)
 
         if (args.verbose):
@@ -153,7 +153,6 @@ if __name__ == "__main__":
     jsonInflux = []
     i = 0
     for d in resGrdf:
-        # Use the formula to create timestamp, 1 ordre = 30min
         t = datetime.datetime.strptime(d['date'] + " 12:00", '%d-%m-%Y %H:%M')
         logging.info(("found value : {0:3} kWh / {1:7.2f} m3 at {2}").format(d['kwh'], d['mcube'], t.strftime('%Y-%m-%dT%H:%M:%SZ')))
         if t.timestamp() > firstTS:
