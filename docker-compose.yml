@@ -1,0 +1,22 @@
+version: "3.7"
+services:
+  gazinflux:
+    container_name: gazinflux
+    image: gazpar:latest
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      - GRDF_USERNAME=test@email.com
+      - GRDF_PASSWORD=password
+      - INFLUXDB_HOST=host
+      - INFLUXDB_DATABASE=gazpar
+      - INFLUXDB_USERNAME=username
+      - INFLUXDB_PASSWORD=password
+      # Optional:
+      #- INFLUXDB_PORT=8086
+      #- INFLUXDB_SSL=true
+      #- INFLUXDB_VERIFY_SSL=true
+    # If influxdb is managed in the same docker-compose file, add this section
+    #depends_on:
+    #  - influxdb
