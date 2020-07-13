@@ -4,6 +4,8 @@
 import os
 import sys
 import datetime
+import schedule
+import time
 import locale
 from dateutil.relativedelta import relativedelta
 from influxdb import InfluxDBClient
@@ -13,18 +15,32 @@ import json
 import argparse
 import logging
 import pprint
+from envparse import env
 
 PFILE = "/.params"
+DOCKER_MANDATORY_VARENV=['GRDF_USERNAME','GRDF_PASSWORD','INFLUXDB_HOST','INFLUXDB_DATABASE','INFLUXDB_USERNAME','INFLUXDB_PASSWORD']
+DOCKER_OPTIONAL_VARENV=['INFLUXDB_PORT', 'INFLUXDB_SSL', 'INFLUXDB_VERIFY_SSL']
 
 
 # Sub to return format wanted by linky.py
 def _dayToStr(date):
     return date.strftime("%d/%m/%Y")
 
-# Open file with params for influxdb, enedis API and HC/HP time window
+# Open file with params for influxdb, GRDF API
 def _openParams(pfile):
+    # Try to load environment variables
+    if set(DOCKER_MANDATORY_VARENV).issubset(set(os.environ)):
+        return {'grdf': {'username': env(DOCKER_MANDATORY_VARENV[0]),
+                         'password': env(DOCKER_MANDATORY_VARENV[1])},
+                'influx': {'host': env(DOCKER_MANDATORY_VARENV[2]),
+                           'port': env.int(DOCKER_OPTIONAL_VARENV[0], default=8086),
+                           'db': env(DOCKER_MANDATORY_VARENV[3]),
+                           'username': env(DOCKER_MANDATORY_VARENV[4]),
+                           'password': env(DOCKER_MANDATORY_VARENV[5]),
+                           'ssl': env.bool(DOCKER_OPTIONAL_VARENV[1], default=True),
+                           'verify_ssl': env.bool(DOCKER_OPTIONAL_VARENV[2], default=True)}}
     # Try to load .params then programs_dir/.params
-    if os.path.isfile(os.getcwd() + pfile):
+    elif os.path.isfile(os.getcwd() + pfile):
         p = os.getcwd() + pfile
     elif os.path.isfile(os.path.dirname(os.path.realpath(__file__)) + pfile):
         p = os.path.dirname(os.path.realpath(__file__)) + pfile
@@ -73,17 +89,7 @@ def _getStartDateInfluxDb(client,measurement):
 
 # Let's start here !
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d",  "--days",    type=int, help="Number of days from now to download", default=1)
-    parser.add_argument("-l",  "--last",    action="store_true", help="Check from InfluxDb the number of missing days", default=False)
-    parser.add_argument("-v",  "--verbose", action="store_true", help="More verbose", default=False)
-    args = parser.parse_args()
-
-    pp = pprint.PrettyPrinter(indent=4)
-    logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
-
+def main():
     params = _openParams(PFILE)
 
     # Try to log in InfluxDB Server
@@ -97,7 +103,7 @@ if __name__ == "__main__":
         logging.error("unable to login on %s", params['influx']['host'])
         sys.exit(1)
 
-    # Try to log in Enedis API
+    # Try to log in GRDF API
     try:
         logging.info("logging in GRDF URI %s...", gazpar.API_BASE_URI)
         token = gazpar.login(params['grdf']['username'], params['grdf']['password'])
@@ -105,6 +111,7 @@ if __name__ == "__main__":
     except:
         logging.error("unable to login on %s : %s", gazpar.API_BASE_URI, exc)
         sys.exit(1)
+
 
     # Calculate start/endDate and firstTS for data to request/parse
     if args.last:
@@ -121,11 +128,11 @@ if __name__ == "__main__":
     logging.info("will use %s as firstDate and %s as startDate", firstTS, startDate)
     endDate = _dayToStr(datetime.date.today())
 
-    # Try to get data from Enedis API
+    # Try to get data from GRDF API
     resGrdf = gazpar.get_data_per_day(token, startDate, endDate)
     try:
         logging.info("get Data from GRDF from {0} to {1}".format(startDate, endDate))
-        # Get result from Enedis by 30m
+        # Get result from GRDF by day
         resGrdf = gazpar.get_data_per_day(token, startDate, endDate)
 
         if (args.verbose):
@@ -139,7 +146,6 @@ if __name__ == "__main__":
     jsonInflux = []
     i = 0
     for d in resGrdf:
-        # Use the formula to create timestamp, 1 ordre = 30min
         t = datetime.datetime.strptime(d['date'] + " 12:00", '%d-%m-%Y %H:%M')
         logging.info(("found value : {0:3} kWh / {1:7.2f} m3 at {2}").format(d['kwh'], d['mcube'], t.strftime('%Y-%m-%dT%H:%M:%SZ')))
         if t.timestamp() > firstTS:
@@ -167,3 +173,29 @@ if __name__ == "__main__":
         logging.info("unable to write data points to influxdb")
     else:
         logging.info("done")
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d",  "--days",    type=int,
+                        help="Number of days from now to download", default=1)
+    parser.add_argument("-l",  "--last",    action="store_true",
+                        help="Check from InfluxDb the number of missing days", default=False)
+    parser.add_argument("-v",  "--verbose", action="store_true",
+                        help="More verbose", default=False)
+    parser.add_argument(
+        "-s", "--schedule",   help="Schedule the launch of the script at hh:mm everyday")
+    args = parser.parse_args()
+
+    pp = pprint.PrettyPrinter(indent=4)
+    logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+
+    if args.schedule:
+        logging.info(args.schedule)
+        schedule.every().day.at(args.schedule).do(main)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+    else:
+        main()

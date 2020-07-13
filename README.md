@@ -12,22 +12,8 @@ The project has been inspired by job done by [empierre](https://github.com/empie
 
 ## Python3 and libs
 
-- `python3` and following dependencies
-  - `os`
-  - `sys`
-  - `datetime`
-  - `locale`
-  - `relativedelta` (from `dateutil.relativedelta`)
-  - `tz` (from `dateutil`)
-  - `InfluxDBClient` (from `influxdb`)
-  - `linky` (see Externals above)
-  - `json`
-  - `argparse`
-  - `logging`
-  - `fake_useragent`
-  - `lxml`
-  - `requests`
-  - `pprint` (not mandatory, just for debugging)
+`python3` with its dependencies:
+- `pip install -r requirements.txt`
 
 If you want to debug, please set level=logging.INFO to level=logging.DEBUG
 
@@ -73,7 +59,19 @@ Example : 5 years (1825d)
 }
 ```
 
-#### Configure your own Parameters in .params
+#### Configure your own parameters
+
+#### By supplying it via docker environment variables
+
+It is possible to supply the configuration when launching the docker container, _ie_:
+
+```bash
+docker run -e GRDF_USERNAME=test@email.com -e GRDF_PASSWORD=password -e INFLUXDB_HOST=192.168.1.99 -e INFLUXDB_DATABASE=gazpar -e INFLUXDB_USERNAME=user -e INFLUXDB_PASSWORD=password -e INFLUXDB_SSL=false -e INFLUXDB_VERIFY_SSL=false gazpar:latest
+```
+
+It is also possible (and easier) to put the configuration in the `docker-compose.yml` file.
+
+#### By modifying the .params file
 
 Well, yes it is dirty, but ... you can perhaps improve using vault or anything related to secret storage :D Please do an MR or fork if you have any better idea.
 
@@ -102,7 +100,6 @@ Copy .params.example to .params and fill with your own values :
 }
 ```
 
-
 ### Grafana
 
 You just have to create dashboard with kind of queries :
@@ -115,17 +112,31 @@ SELECT mean("mcube") FROM "conso_gaz" WHERE $timeFilter GROUP BY time($__interva
 
 ### Script usage
 
-#### Test it !
+#### Test it manually
 
 You should run by hand for filling the first time and using --last for the next ones
 ```
 # python3 gazinflux.py --days=5
 ```
 
-#### crontab
-
-When it works, just put in a crontab to fetch last days values (change `$USER`)
-
+If you want it to be scheduled, you can run the script like this (for it to be scheduled at 06:00 everyday):
+```bash
+python3 gazinflux.py --last --schedule 06:00
 ```
-# cat /etc/crontab | grep linky
-00 6    * * *   $USER    cd /home/$USER//linkyndle && &&  python3 gazinflux.py --last  >> ./gazinflux.log 2>&1
+
+#### Launching with docker
+
+You can either use the `docker-compose.yml` file to run the script:
+
+```bash
+docker-compose up -d --build
+```
+
+Or run the container manually:
+
+```bash
+#Build the image
+docker build -t gazpar:latest .
+#Run it
+docker run -d gazpar:latest
+```

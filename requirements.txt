@@ -1,0 +1,9 @@
+requests
+lxml
+python-dateutil
+influxdb
+argparse
+fake_useragent
+pprint
+envparse
+schedule
