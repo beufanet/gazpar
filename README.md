@@ -33,7 +33,7 @@ Create d
 ```
 > CREATE DATABASE gazpar
 > CREATE USER "gazpar" WITH PASSWORD [REDACTED]
-> GRANT ALL ON "gazpar" TO "linky"
+> GRANT ALL ON "gazpar" TO "gazpar"
 ```
 
 #### Alter default retention and tune it as you want
