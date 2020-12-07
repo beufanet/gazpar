@@ -37,6 +37,7 @@ global JAVAVXS
 LOGIN_BASE_URI = 'https://monespace.grdf.fr/web/guest/monespace'
 API_BASE_URI = 'https://monespace.grdf.fr/monespace/particulier'
 JAVAVXS = ''
+CA_CERT = os.getcwd()+'/certignarootca.pem'
 
 API_ENDPOINT_LOGIN = '?p_p_id=EspacePerso_WAR_EPportlet&p_p_lifecycle=2&p_p_state=normal&p_p_mode=view&p_p_cacheability=cacheLevelPage&p_p_col_id=column-2&p_p_col_count=1&_EspacePerso_WAR_EPportlet__jsfBridgeAjax=true&_EspacePerso_WAR_EPportlet__facesViewIdResource=%2Fviews%2FespacePerso%2FseconnecterEspaceViewMode.xhtml'
 API_ENDPOINT_HOME = '/accueil'
@@ -64,8 +65,10 @@ def login(username, password):
     """Logs the user into the Linky API.
     """
     global JAVAVXS
-    session = requests.Session()
+    global CA_CERT
 
+    session = requests.Session()
+    
     payload = {
                'javax.faces.partial.ajax': 'true',
                'javax.faces.source': '_EspacePerso_WAR_EPportlet_:seConnecterForm:meConnecter',
@@ -90,9 +93,9 @@ def login(username, password):
 
     session.cookies['KPISavedRef'] ='https://monespace.grdf.fr/monespace/connexion'
 
-    session.get(LOGIN_BASE_URI + API_ENDPOINT_LOGIN, data=payload, allow_redirects=False)
-
-    req = session.post(LOGIN_BASE_URI + API_ENDPOINT_LOGIN, data=payload, allow_redirects=False)
+    session.get(LOGIN_BASE_URI + API_ENDPOINT_LOGIN, data=payload, allow_redirects=False, verify=CA_CERT)
+    
+    req = session.post(LOGIN_BASE_URI + API_ENDPOINT_LOGIN, data=payload, allow_redirects=False, verify=CA_CERT)
 
     javaxvs=parse_lxml(req.text)
 

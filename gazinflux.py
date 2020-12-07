@@ -109,7 +109,7 @@ def main():
         token = gazpar.login(params['grdf']['username'], params['grdf']['password'])
         logging.info("logged in successfully!")
     except:
-        logging.error("unable to login on %s : %s", gazpar.API_BASE_URI, exc)
+        logging.error("unable to login on %s", gazpar.API_BASE_URI)
         sys.exit(1)
 
 
@@ -121,7 +121,7 @@ def main():
         firstTS =  _getDateTS(int(startDate[0]),int(startDate[1]),int(startDate[2]),12,0)
         startDate = startDate[2]+"/"+startDate[1]+"/"+startDate[0]
     else :
-        logging.warn("GRDF will perhaps has not all data for the last %s days ",args.days)
+        logging.warning("GRDF will perhaps has not all data for the last %s days ",args.days)
         startDate = _getStartDate(datetime.date.today(), args.days)
         firstTS =  _getStartTS(args.days)
 
